@@ -22,6 +22,6 @@ if __name__ == '__main__':
 
     process = VideoProcessor(input_file, output_file)
 
-    process.run(show_video=True)
+    process.run(show_video=False)
     print(process.frame.shape)
 

@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 class VideoProcessor:
     def __init__(self, input_file: str, output_file: str, new_width=None, new_height=None):
@@ -12,14 +13,18 @@ class VideoProcessor:
         self.new_height = new_height or self.height
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = cv2.VideoWriter(output_file, fourcc, self.fps, (self.new_width, self.new_height))
-        self.frame=None
+        self.frame=None 
+        self.current_time = None
 
         print('initializing new video')
 
 
     # helper function to change what you do based on video seconds
-    def between(self, lower: int, upper: int) -> bool:
-        return lower <= int(self.cap.get(cv2.CAP_PROP_POS_MSEC)) < upper
+    def between(self, lower = None, upper=None) -> bool:
+        if lower is not None and upper is not None:
+            return lower <= int(self.cap.get(cv2.CAP_PROP_POS_MSEC)) < upper
+        else:
+            return self.lower <= int(self.cap.get(cv2.CAP_PROP_POS_MSEC)) < self.upper
 
     #downsample the video to a lower resolution
     def downsample(self, frame):
@@ -28,21 +33,47 @@ class VideoProcessor:
         return frame
     
     def to_gray(self):
+        # if not self.between(1000, 39999):
+        start_time = 1000       
+        end_time = 39999
+        if not start_time<=self.current_time<=end_time:
+            return
+
         if(self.frame.shape[2]==1):
             return
         else:
             self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)  
-        return
+            return
+    
+    def gamma_transform(self):
+        gamma_0 = 0
+        gamma_end = 5 
+        start_time = 2000
+        duration = 6000 
+        end_time = start_time+duration-1
+               
+        shifted_time = self.current_time - start_time #start at t =0
+        gamma = ((gamma_end-gamma_0)/duration)*shifted_time +gamma_0
+              
+
+        if not start_time<=self.current_time<=end_time:
+            return
+        else:
+            self.frame = np.array(255*(self.frame / np.max(self.frame)) ** gamma, dtype = 'uint8')
+  
+            return
+
         
         
     
     
-    def intensity_transform(self,frame):
-        return frame
+
 
 
     
     def run(self, show_video=False):
+
+        
 
         while self.cap.isOpened():
             ret, self.frame = self.cap.read()
@@ -51,8 +82,15 @@ class VideoProcessor:
             
             # if cv2.waitKey(28) & 0xFF == ord('q'):
             #     break
-            if self.between(1000, 39999):
-                self.to_gray()                
+            self.current_time = int(self.cap.get(cv2.CAP_PROP_POS_MSEC))
+            self.to_gray()
+            self.gamma_transform()
+            # if self.between(1000, 39999):
+            #     self.to_gray()
+                
+            # if self.between(2000,7999):
+
+            #     self.gamma_transform()                
                 
             # ...
 
