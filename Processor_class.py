@@ -45,11 +45,10 @@ class VideoProcessor:
             self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)  
             return
     
-    def gamma_transform(self):
+    def gamma_transform(self,start_time,duration):
         gamma_0 = 0
         gamma_end = 5 
-        start_time = 2000
-        duration = 6000 
+        # start_time = 2000        
         end_time = start_time+duration-1
                
         shifted_time = self.current_time - start_time #start at t =0
@@ -62,6 +61,29 @@ class VideoProcessor:
             self.frame = np.array(255*(self.frame / np.max(self.frame)) ** gamma, dtype = 'uint8')
   
             return
+    def smoothing(self,start_time,duration):
+        end_time = start_time+duration-1
+        if not start_time<=self.current_time<=end_time:
+            return
+        else:
+            kernel = (1/9)*np.array([[1,1,1],
+                               [1,1,1],
+                               [1,1,1]])
+            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            return
+        
+    def sharpening(self,start_time,duration):
+        end_time = start_time+duration-1
+        if not start_time<=self.current_time<=end_time:
+            return
+        else:
+            kernel = np.array([[0,-1,0],
+                     [-1,5,-1],
+                     [0,-1,0]])
+            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            return
+
+ 
 
         
         
@@ -84,7 +106,15 @@ class VideoProcessor:
             #     break
             self.current_time = int(self.cap.get(cv2.CAP_PROP_POS_MSEC))
             self.to_gray()
-            self.gamma_transform()
+            start = 2000
+            dur = 6000
+            self.gamma_transform(start,dur)
+            start = start+dur
+            dur = 3000
+            self.smoothing(start,dur)
+            start = start+dur
+            dur = 3000
+            self.sharpening(start,dur)
             # if self.between(1000, 39999):
             #     self.to_gray()
                 
