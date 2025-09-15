@@ -33,7 +33,6 @@ class VideoProcessor:
         return frame
     
     def to_gray(self):
-        # if not self.between(1000, 39999):
         start_time = 1000       
         end_time = 39999
         if not start_time<=self.current_time<=end_time:
@@ -82,17 +81,31 @@ class VideoProcessor:
                      [0,-1,0]])
             self.frame = cv2.filter2D(self.frame, -1, kernel)  
             return
-
+        
+        
+    def custom1(self,start_time,duration):
+        end_time = start_time+duration-1
+        if not start_time<=self.current_time<=end_time:
+            return
+        else:
+            kernel = np.array([[1,0,-1],
+                     [1,0,-1],
+                     [1,0,-1]])
+            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            return 
+           
+    def custom2(self,start_time,duration):
+        end_time = start_time+duration-1
+        if not start_time<=self.current_time<=end_time:
+            return
+        else:
+            kernel = np.array([[0,1,0],
+                     [1,1,1],
+                     [0,1,0]])
+            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            return     
  
-
-        
-        
-    
-    
-
-
-
-    
+   
     def run(self, show_video=False):
 
         
@@ -115,14 +128,13 @@ class VideoProcessor:
             start = start+dur
             dur = 3000
             self.sharpening(start,dur)
-            # if self.between(1000, 39999):
-            #     self.to_gray()
-                
-            # if self.between(2000,7999):
+            start = start+dur
+            dur = 3000
+            self.custom1(start,dur)
+            start = start+dur
+            dur = 3000
+            self.custom2(start,dur)
 
-            #     self.gamma_transform()                
-                
-            # ...
 
             # write frame that you processed to output
             self.out.write(self.frame)
