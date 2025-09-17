@@ -6,15 +6,15 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
 class VideoProcessor:
-    def __init__(self, input_file: str, output_file: str, new_width=None, new_height=None):
+    def __init__(self, input_file: str, output_file: str, down_fact: float = 1.0):
         self.input_file = input_file
         self.output_file = output_file
         self.cap = cv2.VideoCapture(input_file)
         self.fps = int(round(self.cap.get(cv2.CAP_PROP_FPS)))
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.new_width = new_width or self.width
-        self.new_height = new_height or self.height
+        self.new_width = int(self.width * down_fact)
+        self.new_height = int(self.height * down_fact)
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = cv2.VideoWriter(output_file, fourcc, self.fps, (self.new_width, self.new_height))
         self.frame=None 
@@ -177,14 +177,12 @@ class VideoProcessor:
         if not start_time <= self.current_time <= end_time:
             return
 
-        # pak het complexe spectrum
         spectrum = self.fourier(start_time,duration,return_spectrum=True)
 
         rows, cols = self.frame.shape[:2]
         crow, ccol = rows // 2, cols // 2
 
-        # circulair masker
-        y, x = np.ogrid[:rows, :cols]
+        y, x = np.ogrid[:rows, :cols] #meshgrid maken
         mask_area = (x - ccol)**2 + (y - crow)**2 <= r*r
         mask = np.zeros((rows, cols), np.uint8)
         mask[mask_area] = 1
@@ -193,14 +191,12 @@ class VideoProcessor:
         # plt.imshow(mask, cmap="gray")
         # plt.title("Low-pass filter result")
         # plt.show()
-        # filteren
+
         filtered = spectrum * mask
 
-        # inverse FFT
         ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
         ifft2 = np.real(ifft2)
 
-        # normaliseren naar uint8
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
@@ -209,14 +205,13 @@ class VideoProcessor:
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
-
-        # pak het complexe spectrum
+        
         spectrum = self.fourier(start_time,duration,return_spectrum=True)
 
         rows, cols = self.frame.shape[:2]
         crow, ccol = rows // 2, cols // 2
 
-        # circulair masker
+        
         y, x = np.ogrid[:rows, :cols]
         mask_area = (x - ccol)**2 + (y - crow)**2 <= r*r
         mask = np.ones((rows, cols), np.uint8)
@@ -226,14 +221,43 @@ class VideoProcessor:
         # plt.imshow(mask, cmap="gray")
         # plt.title("Low-pass filter result")
         # plt.show()
-        # filteren
+       
         filtered = spectrum * mask
 
-        # inverse FFT
+        
         ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
         ifft2 = np.real(ifft2)
 
-        # normaliseren naar uint8
+        ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
+        self.frame = np.uint8(ifft2)
+        self.write_frame = True
+
+    def band_pass(self, start_time, duration, r_in=50,r_out = 150):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= end_time:
+            return
+    
+        spectrum = self.fourier(start_time,duration,return_spectrum=True)
+
+        rows, cols = self.frame.shape[:2]
+        crow, ccol = rows // 2, cols // 2
+      
+        y, x = np.ogrid[:rows, :cols]
+        circ = (x - ccol)**2 + (y - crow)**2
+        mask_area = (circ >= r_in*r_in) & (circ <= r_out*r_out)
+        mask = np.zeros((rows, cols), np.uint8)
+        mask[mask_area] = 1
+        
+        # plt.figure()
+        # plt.imshow(mask, cmap="gray")
+        # plt.title("Low-pass filter result")
+        # plt.show()
+        
+        filtered = spectrum * mask
+
+        ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
+        ifft2 = np.real(ifft2)
+
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
@@ -279,6 +303,9 @@ class VideoProcessor:
             start = start+dur
             dur = 5000
             self.high_pass(start,dur)
+            start = start+dur
+            dur = 5000
+            self.band_pass(start,dur)
 
 
             # write frame that you processed to output
@@ -295,6 +322,71 @@ class VideoProcessor:
             # Press Q on keyboard to  exit
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
+
+    def debug_single_frame(self, timestamp_ms, show_video=True, save_frame=False):
+        
+        self.cap.set(cv2.CAP_PROP_POS_MSEC, timestamp_ms)
+        ret, self.frame = self.cap.read()
+        if not ret:
+            print("Kon frame niet lezen op tijdstip", timestamp_ms)
+            return
+        
+        self.current_time = int(self.cap.get(cv2.CAP_PROP_POS_MSEC))
+        print(f"Debug frame on {self.current_time} ms")
+        
+        self.downsample()
+        self.to_gray()
+
+        start = 2000
+        dur = 6000
+        self.gamma_transform(start, dur)
+        start += dur
+        dur = 3000
+        self.smoothing(start, dur)
+        start += dur
+        dur = 3000
+        self.sharpening(start, dur)
+        start += dur
+        dur = 3000
+        self.custom1(start, dur)
+        start += dur
+        dur = 3000
+        self.custom2(start, dur)
+        start += dur
+        dur = 5000
+        fft = self.fourier(start, dur)
+        start += dur
+        dur = 5000
+        self.low_pass(start, dur)
+        start += dur
+        dur = 5000
+        self.high_pass(start, dur)
+        start = start+dur
+        dur = 5000
+        self.band_pass(start,dur)
+
+        if self.write_frame:
+            frame_to_show = self.frame
+        else:
+            frame_to_show = fft
+            self.write_frame = True
+
+        if show_video:
+            cv2.imshow('Debug Frame', frame_to_show)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        
+        if save_frame:
+            cv2.imwrite("debug_frame.png", frame_to_show)
+            print("saved frame")
+
+            im = cv2.imread('debug_frame.png')
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+            plt.figure()
+            plt.imshow(im)
+            plt.show()
+            print(np.max(im))
+
 
 
 

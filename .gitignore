@@ -16,5 +16,9 @@ venv/
 *.avi
 *.mov
 
+# Afbeeldingen
+*.png
+*.jpg
+
 # Output directory
 Processed_videos/
