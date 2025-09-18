@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 from scipy.fft import ifftshift, fftshift, fftfreq, fft2
-import imageio
+from skimage import morphology
+
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
@@ -20,6 +21,8 @@ class VideoProcessor:
         self.frame=None 
         self.current_time = None
         self.write_frame = True
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.end_time_vid = ((self.frame_count - 1) / self.fps)*1000
 
         print('Processing new video')
 
@@ -38,9 +41,8 @@ class VideoProcessor:
         return 
      
     def to_gray(self):
-        start_time = 1000       
-        end_time = 39999
-        if not start_time<=self.current_time<=end_time:
+        start_time = 1000               
+        if not start_time<=self.current_time<=self.end_time_vid:
             return
 
         if(self.frame.shape[2]==1):
@@ -262,6 +264,46 @@ class VideoProcessor:
         self.frame = np.uint8(ifft2)
         self.write_frame = True
 
+    def thresholding(self,start_time,duration,threshold_value =100):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= self.end_time_vid:
+            return
+        ret, binary_image = cv2.threshold(self.frame,threshold_value,np.max(self.frame),cv2.THRESH_BINARY)
+        self.frame = binary_image
+        return 
+    
+    def opening(self, start_time,duration):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= end_time:
+            return
+        self.frame = morphology.binary_opening(self.frame)
+        self.frame = (self.frame.astype(np.uint8))*255
+        return
+    
+    def closing(self, start_time,duration):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= end_time:
+            return
+        self.frame = morphology.binary_closing(self.frame)
+        self.frame = (self.frame.astype(np.uint8))*255
+        return
+    
+    def dilation(self, start_time,duration):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= end_time:
+            return
+        self.frame = morphology.binary_dilation(self.frame)
+        self.frame = (self.frame.astype(np.uint8))*255
+        return
+    
+    def erosion(self, start_time,duration):
+        end_time = start_time + duration - 1
+        if not start_time <= self.current_time <= end_time:
+            return
+        self.frame = morphology.binary_erosion(self.frame)
+        self.frame = (self.frame.astype(np.uint8))*255
+        return
+
         
 
    
@@ -306,6 +348,23 @@ class VideoProcessor:
             start = start+dur
             dur = 5000
             self.band_pass(start,dur)
+            start = start+dur
+            dur = 4000
+            self.thresholding(start,dur)
+            start = start+dur
+            dur = 4000
+            self.opening(start,dur)
+            start = start+dur
+            dur = 4000
+            self.closing(start,dur)
+            start = start+dur
+            dur = 4000
+            self.dilation(start,dur)
+            start = start+dur
+            dur = 4000
+            self.erosion(start,dur)
+
+
 
 
             # write frame that you processed to output
@@ -364,6 +423,21 @@ class VideoProcessor:
         start = start+dur
         dur = 5000
         self.band_pass(start,dur)
+        start = start+dur
+        dur = 4000
+        self.thresholding(start,dur)
+        start = start+dur
+        dur = 4000
+        self.opening(start,dur)
+        start = start+dur
+        dur = 4000
+        self.closing(start,dur)
+        start = start+dur
+        dur = 4000
+        self.dilation(start,dur)
+        start = start+dur
+        dur = 4000
+        self.erosion(start,dur)
 
         if self.write_frame:
             frame_to_show = self.frame
