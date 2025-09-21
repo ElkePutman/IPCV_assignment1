@@ -14,6 +14,7 @@ class VideoProcessor:
         self.fps = int(round(self.cap.get(cv2.CAP_PROP_FPS)))
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.down_fact = down_fact
         self.new_width = int(self.width * down_fact)
         self.new_height = int(self.height * down_fact)
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -48,7 +49,15 @@ class VideoProcessor:
         if(self.frame.shape[2]==1):
             return
         else:
-            self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)  
+            self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_GRAY2BGR) #go back to 3 channels but in grey, all channels same value
+            if 0.0<=self.current_time<1999:  
+                x = int(self.down_fact * 200)
+                y = int(self.down_fact * 670)
+                sz = int(self.down_fact*2)
+                th = int(self.down_fact*3)
+                cv2.putText(self.frame, f"Color to Grey using cvtColor", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                    sz, (255, 0, 0), th, cv2.LINE_AA)
             return
     
     def gamma_transform(self,start_time,duration):
@@ -64,7 +73,13 @@ class VideoProcessor:
         if not start_time<=self.current_time<=end_time:
             return
         else:
-            self.frame = np.array(255*(self.frame / np.max(self.frame)) ** gamma, dtype = 'uint8')
+            self.frame = np.array(np.max(self.frame)*(self.frame / np.max(self.frame)) ** gamma, dtype = 'uint8')
+            x = int(self.down_fact * 400)
+            y = int(self.down_fact * 670) 
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3)
+            cv2.putText(self.frame, f"Gamma={gamma:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA)
   
             return
     def smoothing(self,start_time,duration):
@@ -76,6 +91,12 @@ class VideoProcessor:
                                [1,1,1],
                                [1,1,1]])
             self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            x = int(self.down_fact * 200)
+            y = int(self.down_fact * 670) 
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3)
+            cv2.putText(self.frame, f"Smoothing with box filter", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA)
             return
         
     def sharpening(self,start_time,duration):
@@ -86,7 +107,13 @@ class VideoProcessor:
             kernel = np.array([[0,-1,0],
                      [-1,5,-1],
                      [0,-1,0]])
-            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            self.frame = cv2.filter2D(self.frame, -1, kernel) 
+            x = int(self.down_fact * 150)
+            y = int(self.down_fact * 670) 
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3)
+            cv2.putText(self.frame, f"Sharpening with sharpening filter", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA) 
             return
         
         
@@ -98,7 +125,13 @@ class VideoProcessor:
             kernel = np.array([[1,0,-1],
                      [1,0,-1],
                      [1,0,-1]])
-            self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            self.frame = cv2.filter2D(self.frame, -1, kernel)
+            x = int(self.down_fact * 200)
+            y = int(self.down_fact * 670)
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3)  
+            cv2.putText(self.frame, f"Vertical edge detection", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA)  
             return 
            
     def custom2(self,start_time,duration):
@@ -110,6 +143,12 @@ class VideoProcessor:
                      [1,1,1],
                      [0,1,0]])
             self.frame = cv2.filter2D(self.frame, -1, kernel)  
+            x = int(self.down_fact * 400)
+            y = int(self.down_fact * 670)
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3) 
+            cv2.putText(self.frame, f"Custom filter 2", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA)  
             return   
 
     def fourier(self,start_time,duration, return_spectrum=False):
@@ -117,11 +156,7 @@ class VideoProcessor:
         if not start_time<=self.current_time<=end_time:
             return
         else:
-            # fft  = fftshift(fft2(ifftshift(self.frame)))
-            # fft_mag = np.abs(fft)
-            # fft_db = 20 * np.log10(fft_mag + 1e-8)
-            # # fft_norm = cv2.normalize(fft_db, None, 0, 255, cv2.NORM_MINMAX) #normalize to 0-255
-            # fft_corr = np.uint8(fft_db)
+            self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY) #go back to one channel for fourier funtions
 
             self.frame = self.frame/np.max(self.frame)
             IM = np.fft.fft2(self.frame) 
@@ -135,66 +170,46 @@ class VideoProcessor:
                 fft_corr = np.uint8(IMlog)
                 # print(np.max(fft_corr))
                 self.write_frame = False
+                x = int(self.down_fact * 400)
+                y = int(self.down_fact * 670) 
+                sz = int(self.down_fact*2)
+                th = int(self.down_fact*3)
+                cv2.putText(fft_corr, f"DFT spectrum", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA) 
                 return  fft_corr
         
-    # def low_pass(self,start_time,duration):
-    #     end_time = start_time+duration-1
-    #     if not start_time<=self.current_time<=end_time:
-    #         return
-    #     fft = self.fourier(start_time,duration)
-    #     #Create a low pass filter image
-    #     x,y = fft.shape[1],fft.shape[0]
-    #     #size of circle
-    #     e_x,e_y=500,500
-    #     #create a box 
-    #     bbox=((x/2)-(e_x/2),(y/2)-(e_y/2),(x/2)+(e_x/2),(y/2)+(e_y/2))
-
-    #     low_pass_filt=Image.new("L",(fft.shape[1],fft.shape[0]),color=0)
-
-    #     draw1=ImageDraw.Draw(low_pass_filt)
-    #     draw1.ellipse(bbox, fill=1)
-
-    #     low_pass_np=np.array(low_pass_filt)
-
-    #     # plt.figure()
-    #     # plt.imshow(low_pass_filt, cmap="gray")
-    #     # plt.title("Low-pass filter result")
-    #     # plt.show()
-
-    #     #multiply both the images
-    #     fft_norm =10**(fft/20)
-    #     filtered=np.multiply(fft_norm,low_pass_np)
-
-    #     #inverse fft
-    #     ifft2 = np.real(np.fft.ifft2(np.fft.ifftshift(filtered)))
-    #     ifft2 = np.maximum(0, np.minimum(ifft2, 255))
-    #     self.frame = np.uint8(ifft2)
 
 
-    #     self.write_frame = True
-    #     return
+    def gaussian(self,D0,type = 'low'):
+        r = self.frame.shape[0]
+        c = self.frame.shape[1]
+        u = np.arange(r)
+        v = np.arange(c)
+        U,V = np.meshgrid(u,v,indexing='ij')
+        D = np.sqrt((U - round(r/2,0))**2 + (V - round(c/2,0))**2) #euclidian distance to center
+        if type == 'low':
+            H = np.exp(-(D**2) / (2.0 * (D0**2)))
+        elif type == 'high':
+            H = 1.0-np.exp(-(D**2) / (2.0 * (D0**2)))
+        else:
+            raise ValueError("No valid filter type")        
+        return H
 
     def low_pass(self, start_time, duration, r=100):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
-
+        
         spectrum = self.fourier(start_time,duration,return_spectrum=True)
 
-        rows, cols = self.frame.shape[:2]
-        crow, ccol = rows // 2, cols // 2
+        D0 = 20
+        tf = self.gaussian(D0,type = 'low')
 
-        y, x = np.ogrid[:rows, :cols] #meshgrid maken
-        mask_area = (x - ccol)**2 + (y - crow)**2 <= r*r
-        mask = np.zeros((rows, cols), np.uint8)
-        mask[mask_area] = 1
         
-        # plt.figure()
-        # plt.imshow(mask, cmap="gray")
-        # plt.title("Low-pass filter result")
-        # plt.show()
+        
 
-        filtered = spectrum * mask
+        filtered = spectrum * tf
+     
 
         ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
         ifft2 = np.real(ifft2)
@@ -202,6 +217,13 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
+        x = int(self.down_fact * 100)
+        y = int(self.down_fact * 670) 
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"Low pass filter with sigma ={D0:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
+
 
     def high_pass(self, start_time, duration, r=100):
         end_time = start_time + duration - 1
@@ -209,22 +231,10 @@ class VideoProcessor:
             return
         
         spectrum = self.fourier(start_time,duration,return_spectrum=True)
-
-        rows, cols = self.frame.shape[:2]
-        crow, ccol = rows // 2, cols // 2
-
-        
-        y, x = np.ogrid[:rows, :cols]
-        mask_area = (x - ccol)**2 + (y - crow)**2 <= r*r
-        mask = np.ones((rows, cols), np.uint8)
-        mask[mask_area] = 0
-        
-        # plt.figure()
-        # plt.imshow(mask, cmap="gray")
-        # plt.title("Low-pass filter result")
-        # plt.show()
+        D0 = 40
+        tf = self.gaussian(D0,type = 'high')
        
-        filtered = spectrum * mask
+        filtered = spectrum * tf
 
         
         ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
@@ -233,6 +243,12 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
+        x = int(self.down_fact * 200)
+        y = int(self.down_fact * 670) 
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"High pass filter with sigma ={D0:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
 
     def band_pass(self, start_time, duration, r_in=50,r_out = 150):
         end_time = start_time + duration - 1
@@ -240,22 +256,13 @@ class VideoProcessor:
             return
     
         spectrum = self.fourier(start_time,duration,return_spectrum=True)
+        D0_in = 40
+        D0_out = 30
+        inner = self.gaussian(D0_in,type = 'low')
+        outer = self.gaussian(D0_out,type='low')
+        tf = outer - inner
 
-        rows, cols = self.frame.shape[:2]
-        crow, ccol = rows // 2, cols // 2
-      
-        y, x = np.ogrid[:rows, :cols]
-        circ = (x - ccol)**2 + (y - crow)**2
-        mask_area = (circ >= r_in*r_in) & (circ <= r_out*r_out)
-        mask = np.zeros((rows, cols), np.uint8)
-        mask[mask_area] = 1
-        
-        # plt.figure()
-        # plt.imshow(mask, cmap="gray")
-        # plt.title("Low-pass filter result")
-        # plt.show()
-        
-        filtered = spectrum * mask
+        filtered = spectrum * tf
 
         ifft2 = np.fft.ifft2(np.fft.ifftshift(filtered))
         ifft2 = np.real(ifft2)
@@ -263,13 +270,26 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
+        x = int(self.down_fact * 50)
+        y = int(self.down_fact * 670)
+        sz = int(self.down_fact*1.2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"Band pass filter with sigma_1 ={D0_in:.2f} and sigma_2 ={D0_out:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
 
-    def thresholding(self,start_time,duration,threshold_value =100):
+    def thresholding(self,start_time,duration,threshold_value =150):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= self.end_time_vid:
             return
         ret, binary_image = cv2.threshold(self.frame,threshold_value,np.max(self.frame),cv2.THRESH_BINARY)
         self.frame = binary_image
+        if start_time<=self.current_time<=end_time:
+            x = int(self.down_fact * 50)
+            y = int(self.down_fact * 670)
+            sz = int(self.down_fact*2)
+            th = int(self.down_fact*3) 
+            cv2.putText(self.frame, f"Binary thresholding threshold = {threshold_value}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+                sz, (255, 0, 0), th, cv2.LINE_AA) 
         return 
     
     def opening(self, start_time,duration):
@@ -278,6 +298,12 @@ class VideoProcessor:
             return
         self.frame = morphology.binary_opening(self.frame)
         self.frame = (self.frame.astype(np.uint8))*255
+        x = int(self.down_fact * 400)
+        y = int(self.down_fact * 670)
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3) 
+        cv2.putText(self.frame, f"Opening", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
         return
     
     def closing(self, start_time,duration):
@@ -286,6 +312,12 @@ class VideoProcessor:
             return
         self.frame = morphology.binary_closing(self.frame)
         self.frame = (self.frame.astype(np.uint8))*255
+        x = int(self.down_fact * 400)
+        y = int(self.down_fact * 670) 
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"Closing", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
         return
     
     def dilation(self, start_time,duration):
@@ -294,6 +326,12 @@ class VideoProcessor:
             return
         self.frame = morphology.binary_dilation(self.frame)
         self.frame = (self.frame.astype(np.uint8))*255
+        x = int(self.down_fact * 400)
+        y = int(self.down_fact * 670) 
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"Dilation", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
         return
     
     def erosion(self, start_time,duration):
@@ -302,6 +340,12 @@ class VideoProcessor:
             return
         self.frame = morphology.binary_erosion(self.frame)
         self.frame = (self.frame.astype(np.uint8))*255
+        x = int(self.down_fact * 400)
+        y = int(self.down_fact * 670) 
+        sz = int(self.down_fact*2)
+        th = int(self.down_fact*3)
+        cv2.putText(self.frame, f"Erosion", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
+            sz, (255, 0, 0), th, cv2.LINE_AA) 
         return
 
         
