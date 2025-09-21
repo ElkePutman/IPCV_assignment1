@@ -250,7 +250,7 @@ class VideoProcessor:
         cv2.putText(self.frame, f"High pass filter with sigma ={D0:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
             sz, (255, 0, 0), th, cv2.LINE_AA) 
 
-    def band_pass(self, start_time, duration, r_in=50,r_out = 150):
+    def band_pass(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
@@ -272,8 +272,8 @@ class VideoProcessor:
         self.write_frame = True
         x = int(self.down_fact * 50)
         y = int(self.down_fact * 670)
-        sz = int(self.down_fact*1.2)
-        th = int(self.down_fact*3)
+        sz = (self.down_fact*1.2)
+        th = int(self.down_fact*3) 
         cv2.putText(self.frame, f"Band pass filter with sigma_1 ={D0_in:.2f} and sigma_2 ={D0_out:.2f}", (x,y), cv2.FONT_HERSHEY_SIMPLEX,
             sz, (255, 0, 0), th, cv2.LINE_AA) 
 
