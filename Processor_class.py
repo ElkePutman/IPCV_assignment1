@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
-from scipy.fft import ifftshift, fftshift, fftfreq, fft2
 from skimage import morphology
-from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
 class VideoProcessor:
