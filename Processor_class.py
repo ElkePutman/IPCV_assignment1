@@ -111,17 +111,20 @@ class VideoProcessor:
         if not start_time <= self.current_time <= end_time:
             return
         self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY) #go back to one channel for fourier functions
-        self.frame = self.frame / np.max(self.frame)
+        self.frame = self.frame / np.max(self.frame) 
         IM = np.fft.fft2(self.frame)
         IM = np.fft.fftshift(IM)
         if return_spectrum:
             return IM
         else:
-            IMlog = np.log(np.abs(IM) + 10)
+            IMmag = np.abs(IM)
+            IMlog = np.log(IMmag + 10)
+            # IMlog = cv2.normalize(IMlog, None, 0, 1, cv2.NORM_MINMAX)
             IMlog = cv2.normalize(IMlog, None, 0, 255, cv2.NORM_MINMAX)
             fft_corr = np.uint8(IMlog)
             self.write_frame = False
             self.put_text("DFT spectrum", x=400, y=670,inp=fft_corr)
+            
             return fft_corr
 
     def gaussian(self, D0, type='low'):
@@ -144,25 +147,25 @@ class VideoProcessor:
         D0 = 20
         tf = self.gaussian(D0, type='low')
         filtered = spectrum * tf
-        ifft2 = np.real(np.fft.ifft2(np.fft.ifftshift(filtered)))
+        ifft2 = np.abs(np.fft.ifft2(np.fft.ifftshift(filtered)))
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
         self.put_text(f"Low pass filter with sigma ={D0:.2f}", x=100, y=670)
 
-    def high_pass(self, start_time, duration, r=100):
+    def high_pass(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         spectrum = self.fourier(start_time, duration, return_spectrum=True)
-        D0 = 40
+        D0 = 20
         tf = self.gaussian(D0, type='high')
         filtered = spectrum * tf
-        ifft2 = np.real(np.fft.ifft2(np.fft.ifftshift(filtered)))
+        ifft2 = np.abs(np.fft.ifft2(np.fft.ifftshift(filtered)))
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
-        self.put_text(f"High pass filter with sigma ={D0:.2f}", x=200, y=670)
+        self.put_text(f"High pass filter with sigma ={D0:.2f}", x=100, y=670)
 
     def band_pass(self, start_time, duration):
         end_time = start_time + duration - 1
@@ -174,13 +177,13 @@ class VideoProcessor:
         outer = self.gaussian(D0_out, type='low')
         tf = outer - inner
         filtered = spectrum * tf
-        ifft2 = np.real(np.fft.ifft2(np.fft.ifftshift(filtered)))
+        ifft2 = np.abs(np.fft.ifft2(np.fft.ifftshift(filtered)))
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
         self.put_text(f"Band pass filter with sigma_1 ={D0_in:.2f} and sigma_2 ={D0_out:.2f}", x=50, y=670,sz_in = 1.2)
 
-    def thresholding(self, start_time, duration, threshold_value=150):
+    def thresholding(self, start_time, duration, threshold_value=100):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= self.end_time_vid:
             return

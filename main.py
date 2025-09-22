@@ -20,7 +20,7 @@ if __name__ == '__main__':
     input_file = os.path.join(BASE_INPUT_PATH, args.input)
     output_file = os.path.join(BASE_OUTPUT_PATH, args.output)
 
-    process = VideoProcessor(input_file, output_file,down_fact=0.9)
+    process = VideoProcessor(input_file, output_file,down_fact=1)
 
-    process.run(show_video=False)
-    # process.debug_single_frame(37000, show_video=False,save_frame=True)
+    # process.run(show_video=False)
+    process.debug_single_frame(41000, show_video=False,save_frame=True)
