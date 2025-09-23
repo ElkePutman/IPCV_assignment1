@@ -20,5 +20,8 @@ venv/
 *.png
 *.jpg
 
+# zip files
+*.zip
+
 # Output directory
 Processed_videos/
