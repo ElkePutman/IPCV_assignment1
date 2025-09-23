@@ -25,10 +25,10 @@ class VideoProcessor:
         print('Processing new video')
 
 
-    def put_text(self,text, x=400, y=670, color=(255, 0, 0),sz_in = 2,inp=None):
+    def put_text(self,text, x=50, y=50, color=(255, 0, 0),sz_in = 0.7,inp=None,th_in = 2):
 
         sz = self.down_fact * sz_in
-        th = int(self.down_fact * 3)
+        th = int(self.down_fact * th_in)
         x_pos = int(self.down_fact * x)
         y_pos = int(self.down_fact * y)
         if inp is None:
@@ -48,6 +48,7 @@ class VideoProcessor:
         if (self.new_width, self.new_height) != (self.width, self.height):
             self.frame = cv2.resize(self.frame, (self.new_width, self.new_height))
 
+    # Make the frames gray
     def to_gray(self):
         start_time = 1000               
         if not start_time <= self.current_time <= self.end_time_vid:
@@ -59,8 +60,9 @@ class VideoProcessor:
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_GRAY2BGR)
             if 0 <= self.current_time < 1999:
-                self.put_text("Color to Grey using cvtColor", x=200, y=670)
+                self.put_text("Color to Grey using cvtColor")
 
+    # apply gamma transform based on a lineair equation
     def gamma_transform(self, start_time, duration):
         gamma_0 = 0
         gamma_end = 5 
@@ -72,40 +74,45 @@ class VideoProcessor:
             return
         else:
             self.frame = np.array(np.max(self.frame) * (self.frame / np.max(self.frame)) ** gamma, dtype='uint8')
-            self.put_text(f"Gamma={gamma:.2f}", x=400, y=670)
+            self.put_text(f"Gamma={gamma:.2f}")
 
+    # add smoothing with a box filter
     def smoothing(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         kernel = (1/9) * np.ones((3, 3))
         self.frame = cv2.filter2D(self.frame, -1, kernel)
-        self.put_text("Smoothing with box filter", x=200, y=670)
+        self.put_text("Smoothing with box filter")
 
+    # using a sharpening filter
     def sharpening(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         self.frame = cv2.filter2D(self.frame, -1, kernel)
-        self.put_text("Sharpening with sharpening filter", x=150, y=670)
+        self.put_text("Sharpening with sharpening filter")
 
+    # apply custom filter for edge detection
     def custom1(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         kernel = np.array([[1,0,-1],[1,0,-1],[1,0,-1]])
         self.frame = cv2.filter2D(self.frame, -1, kernel)
-        self.put_text("Vertical edge detection", x=200, y=670)
+        self.put_text("Vertical edge detection")
 
+    # apply custom filter 2
     def custom2(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         kernel = np.array([[0,1,0],[1,1,1],[0,1,0]])
         self.frame = cv2.filter2D(self.frame, -1, kernel)
-        self.put_text("Custom filter 2", x=400, y=670)
+        self.put_text("Custom filter 2")
 
+    # Apply fourier transform to the frame
     def fourier(self, start_time, duration, return_spectrum=False):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
@@ -119,14 +126,14 @@ class VideoProcessor:
         else:
             IMmag = np.abs(IM)
             IMlog = np.log(IMmag + 10)
-            # IMlog = cv2.normalize(IMlog, None, 0, 1, cv2.NORM_MINMAX)
             IMlog = cv2.normalize(IMlog, None, 0, 255, cv2.NORM_MINMAX)
             fft_corr = np.uint8(IMlog)
             self.write_frame = False
-            self.put_text("DFT spectrum", x=400, y=670,inp=fft_corr)
+            self.put_text("DFT spectrum",inp=fft_corr)
             
             return fft_corr
 
+    # create a 2D gaussian for the fourier filters
     def gaussian(self, D0, type='low'):
         r, c = self.frame.shape[:2]
         U, V = np.meshgrid(np.arange(r), np.arange(c), indexing='ij')
@@ -139,7 +146,8 @@ class VideoProcessor:
             raise ValueError("No valid filter type")
         return H
 
-    def low_pass(self, start_time, duration, r=100):
+    # apply a low pass filter
+    def low_pass(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
@@ -151,8 +159,9 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
-        self.put_text(f"Low pass filter with sigma ={D0:.2f}", x=100, y=670)
+        self.put_text(f"Low pass filter with sigma ={D0:.1f}")
 
+    # apply a high pass filter
     def high_pass(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
@@ -165,8 +174,9 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
-        self.put_text(f"High pass filter with sigma ={D0:.2f}", x=100, y=670)
+        self.put_text(f"High pass filter with sigma ={D0:.1f}")
 
+    # apply a band pass filter
     def band_pass(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
@@ -181,8 +191,9 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
-        self.put_text(f"Band pass filter with sigma_1 ={D0_in:.2f} and sigma_2 ={D0_out:.2f}", x=50, y=670,sz_in = 1.2)
+        self.put_text(f"Band pass filter with sigma_1 ={D0_in:.1f} and sigma_2 ={D0_out:.2f}",sz_in=0.4, th_in=1)
 
+    # apply binary thresholding
     def thresholding(self, start_time, duration, threshold_value=100):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= self.end_time_vid:
@@ -190,37 +201,43 @@ class VideoProcessor:
         ret, binary_image = cv2.threshold(self.frame, threshold_value, np.max(self.frame), cv2.THRESH_BINARY)
         self.frame = binary_image
         if start_time <= self.current_time <= end_time:
-            self.put_text(f"Binary thresholding threshold = {threshold_value}", x=50, y=670)
+            self.put_text(f"Binary thresholding with threshold = {threshold_value}")
 
+    # apply binary opening
     def opening(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         self.frame = (morphology.binary_opening(self.frame).astype(np.uint8)) * 255
-        self.put_text("Opening", x=400, y=670)
+        self.put_text("Opening")
 
+    # apply binary closing
     def closing(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         self.frame = (morphology.binary_closing(self.frame).astype(np.uint8)) * 255
-        self.put_text("Closing", x=400, y=670)
+        self.put_text("Closing")
 
+    # apply binary dilation
     def dilation(self, start_time, duration):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         self.frame = (morphology.binary_dilation(self.frame).astype(np.uint8)) * 255
-        self.put_text("Dilation", x=400, y=670)
+        self.put_text("Dilation")
 
+    # apply binary erosion
     def erosion(self, start_time, duration):
-        end_time = start_time + duration - 1
+        end_time =self.end_time_vid
+        # end_time = start_time + duration - 1
         if not start_time <= self.current_time <= end_time:
             return
         self.frame = (morphology.binary_erosion(self.frame).astype(np.uint8)) * 255
-        self.put_text("Erosion", x=400, y=670)
+        self.put_text("Erosion")
 
-   
+
+    # run all the funtions
     def run(self, show_video=False):
         #list of filters (funciton,duration(ms))
         filters = [
@@ -249,7 +266,7 @@ class VideoProcessor:
             self.to_gray()
 
             start = 2000
-            fft_frame = None #create for fourier function
+            fft_frame = None 
 
             for func, dur in filters:
 
@@ -271,6 +288,7 @@ class VideoProcessor:
                     break
 
 
+    # if debugging is needed, run this
     def debug_single_frame(self, timestamp_ms, show_video=True, save_frame=False):
 
         self.cap.set(cv2.CAP_PROP_POS_MSEC, timestamp_ms)
@@ -327,23 +345,5 @@ class VideoProcessor:
             im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
             plt.figure()
             plt.imshow(im)
-            plt.show()
-            print(np.max(im))
-
-            frame_to_show = self.frame if self.write_frame else fft_frame
-            self.write_frame = True
-
-            if show_video:
-                cv2.imshow('Debug Frame', frame_to_show)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-            
-            if save_frame:
-                cv2.imwrite("debug_frame.png", frame_to_show)
-                print("Saved frame")
-                im = cv2.imread('debug_frame.png')
-                im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-                plt.figure()
-                plt.imshow(im)
-                plt.show()
-                print(np.max(im))
+            plt.show()   
+ 

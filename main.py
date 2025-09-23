@@ -13,7 +13,7 @@ if __name__ == '__main__':
     if args.input is None or args.output is None:
         sys.exit("Please provide input and output video filenames! See --help")
 
-    # zet hier je standaardpad
+   
     BASE_INPUT_PATH = r"C:\Users\ejput\OneDrive - University of Twente\BME\252601-Kwartiel 1 2025\Image processing\Assignment_1"
     BASE_OUTPUT_PATH = r"C:\Users\ejput\OneDrive - University of Twente\BME\252601-Kwartiel 1 2025\Image processing\Assignment_1\Processed_videos"
 
@@ -22,5 +22,5 @@ if __name__ == '__main__':
 
     process = VideoProcessor(input_file, output_file,down_fact=1)
 
-    # process.run(show_video=False)
-    process.debug_single_frame(41000, show_video=False,save_frame=True)
+    process.run(show_video=False)
+    # process.debug_single_frame(3000, show_video=False,save_frame=True)
