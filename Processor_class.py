@@ -191,10 +191,10 @@ class VideoProcessor:
         ifft2 = cv2.normalize(ifft2, None, 0, 255, cv2.NORM_MINMAX)
         self.frame = np.uint8(ifft2)
         self.write_frame = True
-        self.put_text(f"Band pass filter with sigma_1 ={D0_in:.1f} and sigma_2 ={D0_out:.2f}",sz_in=0.4, th_in=1)
+        self.put_text(f"Band pass filter with sigma_1 ={D0_in:.1f} and sigma_2 ={D0_out:.1f}",sz_in=0.4, th_in=1)
 
     # apply binary thresholding
-    def thresholding(self, start_time, duration, threshold_value=100):
+    def thresholding(self, start_time, duration, threshold_value=150):
         end_time = start_time + duration - 1
         if not start_time <= self.current_time <= self.end_time_vid:
             return
